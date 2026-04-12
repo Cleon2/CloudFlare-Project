@@ -1,0 +1,23 @@
+{
+	"name": "morning-digest",
+	"pages_build_output_dir": "dist",
+	"compatibility_date": "2024-09-23",
+	"compatibility_flags": ["nodejs_compat"],
+	"ai": {
+		"binding": "AI"
+	},
+	"kv_namespaces": [
+		{
+			"binding": "DIGEST_KV",
+			"id": "7e708ff395164ff59a62aeb9f2739e2b",
+			"preview_id": "7e708ff395164ff59a62aeb9f2739e2b"
+		}
+	],
+	"d1_databases": [
+		{
+			"binding": "morning_digest_db",
+			"database_name": "morning-digest-db",
+			"database_id": "b8688b21-3e56-4bd0-92cf-fcff83e5bf21"
+		}
+	]
+}
