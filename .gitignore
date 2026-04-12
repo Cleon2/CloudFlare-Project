@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Wrangler local state (KV data, D1 data, local secrets)
+.wrangler/
+
+# Environment / secrets
+.env
+.env.local
+.dev.vars
+
+# OS
+.DS_Store

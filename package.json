@@ -1,0 +1,26 @@
+{
+  "name": "morning-digest",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -n \"vite,pages\" -c \"cyan,yellow\" \"vite\" \"wrangler pages dev --proxy 5173 --compatibility-date=2024-09-23\"",
+    "build": "vite build",
+    "deploy": "vite build && wrangler pages deploy dist",
+    "db:init": "wrangler d1 execute morning-digest-db --local --file=schema.sql"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241224.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.0",
+    "typescript": "^5.5.2",
+    "vite": "^5.4.11",
+    "wrangler": "^3.99.0"
+  }
+}
