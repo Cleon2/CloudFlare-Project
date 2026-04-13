@@ -120,8 +120,9 @@ export async function processArticle(
           ),
         },
       ],
-      max_tokens: 1000,
+      max_tokens: 1500,
       temperature: 0.3,
+      response_format: { type: 'json_object' },
     });
 
     const raw = res?.response ?? "";
@@ -129,7 +130,7 @@ export async function processArticle(
     try {
       parsed = JSON.parse(extractJson(raw));
     } catch {
-      console.error(`[ai] JSON parse failed for "${article.title}" (${article.source}). Raw response: ${raw.slice(0, 300)}`);
+      console.error(`[ai] JSON parse failed for "${article.title}" (${article.source}). Raw response: ${raw.slice(0, 800)}`);
       throw new Error("JSON parse failed");
     }
 
