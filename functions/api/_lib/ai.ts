@@ -88,7 +88,7 @@ export async function processArticle(
           ),
         },
       ],
-      max_tokens: 800,
+      max_tokens: 1000,
       temperature: 0.3,
     });
 
@@ -101,9 +101,21 @@ export async function processArticle(
     readingMinutes =
       typeof parsed.readingMinutes === "number" ? parsed.readingMinutes : 5;
   } catch {
-    body = article.content.split(/\s+/).slice(0, 600).join(" ");
-    hook = article.title;
-    readingMinutes = Math.max(1, Math.ceil(body.split(/\s+/).length / 200));
+    return {
+      id: crypto.randomUUID(),
+      title: article.title,
+      url: article.url,
+      source: article.source,
+      author: article.author,
+      pubDate: article.pubDate,
+      topic: article.topic,
+      hook: "",
+      body: "",
+      pullQuotes: [],
+      keyLinks: [],
+      readingMinutes: 0,
+      summaryFailed: true,
+    };
   }
 
   return {

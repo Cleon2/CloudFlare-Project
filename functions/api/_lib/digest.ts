@@ -1,13 +1,17 @@
 import type { Env, DailyDigest, UserPreferences } from './types';
-import { fetchArticlesForInterests } from './rss';
+import { fetchArticlesForInterests, enrichArticleContent } from './rss';
 import { processArticlesBatch } from './ai';
+
+// Bump this when deploying changes that affect summarization quality.
+// Old digests become unreachable immediately (they expire via their TTL naturally).
+const CACHE_VERSION = 'v2';
 
 function todayISO(): string {
   return new Date().toISOString().split('T')[0];
 }
 
 export function digestKey(userId: string): string {
-  return `digest:${userId}:${todayISO()}`;
+  return `digest:${CACHE_VERSION}:${userId}:${todayISO()}`;
 }
 
 export function prefsKey(userId: string): string {
@@ -47,7 +51,17 @@ export async function buildAndCache(userId: string, prefs: UserPreferences, env:
   // surface the full set rather than returning an empty digest
   const toProcess = unseen.length >= 3 ? unseen : raw;
 
-  const articles = await processArticlesBatch(toProcess, env);
+  // Enrich thin RSS articles with full content fetched from the article URL.
+  // Runs in concurrent batches of 5; failures fall back silently to RSS content.
+  const ENRICH_CONCURRENCY = 5;
+  const enriched: typeof toProcess = [];
+  for (let i = 0; i < toProcess.length; i += ENRICH_CONCURRENCY) {
+    const chunk = toProcess.slice(i, i + ENRICH_CONCURRENCY);
+    const settled = await Promise.allSettled(chunk.map(a => enrichArticleContent(a)));
+    settled.forEach((r, j) => enriched.push(r.status === 'fulfilled' ? r.value : chunk[j]));
+  }
+
+  const articles = await processArticlesBatch(enriched, env);
 
   const digest: DailyDigest = {
     date:        todayISO(),

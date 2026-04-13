@@ -144,6 +144,57 @@ function parseItems(xml: string, sourceName: string, topic: string): RawArticle[
 }
 
 // ---------------------------------------------------------------------------
+// Full-article content fetching
+// ---------------------------------------------------------------------------
+
+function extractMainContent(html: string): string {
+  // Try semantic containers in priority order before falling back to <body>
+  const patterns: RegExp[] = [
+    /<article[^>]*>([\s\S]*?)<\/article>/i,
+    /<main[^>]*>([\s\S]*?)<\/main>/i,
+  ];
+  for (const re of patterns) {
+    const m = html.match(re);
+    if (m) {
+      const text = stripHtml(m[1]);
+      if (text.split(/\s+/).length > 150) return text;
+    }
+  }
+  const body = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  return stripHtml(body ? body[1] : html);
+}
+
+export async function enrichArticleContent(article: RawArticle): Promise<RawArticle> {
+  // If the RSS already gave us plenty of text, skip the extra fetch entirely
+  if (article.content.split(/\s+/).length >= 350) return article;
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 6000);
+    const res = await fetch(article.url, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'MorningDigest/1.0 (+https://morning-digest.workers.dev)' },
+    });
+    clearTimeout(timer);
+    if (!res.ok) return article;
+
+    const html = await res.text();
+    const fetched = extractMainContent(html);
+    const fetchedWords = fetched.split(/\s+/).length;
+    const rssWords    = article.content.split(/\s+/).length;
+
+    // Only upgrade if the fetched version is meaningfully richer
+    if (fetchedWords > rssWords * 1.5 && fetchedWords > 200) {
+      return { ...article, content: fetched };
+    }
+  } catch {
+    // Timeout, bot block, paywall — silently keep RSS content
+  }
+
+  return article;
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
