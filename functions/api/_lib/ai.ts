@@ -92,7 +92,14 @@ export async function processArticle(
       temperature: 0.3,
     });
 
-    const parsed = JSON.parse(extractJson(res?.response ?? ""));
+    const raw = res?.response ?? "";
+    let parsed: ReturnType<typeof JSON.parse>;
+    try {
+      parsed = JSON.parse(extractJson(raw));
+    } catch {
+      console.error(`[ai] JSON parse failed for "${article.title}" (${article.source}). Raw response: ${raw.slice(0, 300)}`);
+      throw new Error("JSON parse failed");
+    }
 
     hook = typeof parsed.hook === "string" ? parsed.hook : "";
     body = typeof parsed.body === "string" ? parsed.body : "";
@@ -100,7 +107,9 @@ export async function processArticle(
     keyLinks = Array.isArray(parsed.keyLinks) ? parsed.keyLinks : [];
     readingMinutes =
       typeof parsed.readingMinutes === "number" ? parsed.readingMinutes : 5;
-  } catch {
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    console.error(`[ai] Summary failed for "${article.title}" (${article.source}): ${reason}`);
     return {
       id: crypto.randomUUID(),
       title: article.title,
