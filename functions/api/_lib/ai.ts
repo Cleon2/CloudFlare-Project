@@ -65,26 +65,26 @@ function extractJson(raw: string): string {
 // is invalid JSON. Walk character-by-character, track string context, and
 // replace any bare control characters with their escaped equivalents.
 function sanitizeJson(raw: string): string {
-  let result = '';
+  let result = "";
   let inString = false;
   let i = 0;
   while (i < raw.length) {
     const ch = raw[i];
-    if (ch === '\\' && inString) {
+    if (ch === "\\" && inString) {
       // Pass through escape sequences untouched
-      result += ch + (raw[i + 1] ?? '');
+      result += ch + (raw[i + 1] ?? "");
       i += 2;
       continue;
     }
     if (ch === '"') {
       inString = !inString;
       result += ch;
-    } else if (inString && ch === '\n') {
-      result += '\\n';
-    } else if (inString && ch === '\r') {
-      result += '\\r';
-    } else if (inString && ch === '\t') {
-      result += '\\t';
+    } else if (inString && ch === "\n") {
+      result += "\\n";
+    } else if (inString && ch === "\r") {
+      result += "\\r";
+    } else if (inString && ch === "\t") {
+      result += "\\t";
     } else {
       result += ch;
     }
@@ -107,29 +107,34 @@ export async function processArticle(
 
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = await (env.AI as any).run("@cf/meta/llama-3.3-70b-fp8-fast", {
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: userPrompt(
-            article.title,
-            article.source,
-            article.author,
-            contentForAI,
-          ),
-        },
-      ],
-      max_tokens: 1500,
-      temperature: 0.3,
-    });
+    const res = await (env.AI as any).run(
+      "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      {
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: userPrompt(
+              article.title,
+              article.source,
+              article.author,
+              contentForAI,
+            ),
+          },
+        ],
+        max_tokens: 1500,
+        temperature: 0.3,
+      },
+    );
 
     const raw = res?.response ?? "";
     let parsed: ReturnType<typeof JSON.parse>;
     try {
       parsed = JSON.parse(extractJson(raw));
     } catch {
-      console.error(`[ai] JSON parse failed for "${article.title}" (${article.source}). Raw response: ${raw.slice(0, 800)}`);
+      console.error(
+        `[ai] JSON parse failed for "${article.title}" (${article.source}). Raw response: ${raw.slice(0, 800)}`,
+      );
       throw new Error("JSON parse failed");
     }
 
@@ -141,7 +146,9 @@ export async function processArticle(
       typeof parsed.readingMinutes === "number" ? parsed.readingMinutes : 5;
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
-    console.error(`[ai] Summary failed for "${article.title}" (${article.source}): ${reason}`);
+    console.error(
+      `[ai] Summary failed for "${article.title}" (${article.source}): ${reason}`,
+    );
     return {
       id: crypto.randomUUID(),
       title: article.title,
