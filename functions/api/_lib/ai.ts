@@ -1,14 +1,14 @@
 import type { Env, RawArticle, ProcessedArticle } from "./types";
 
-const SYSTEM_PROMPT = `You are a senior editor at a prestigious long-form publication — think The Atlantic, The Economist, or Wired at its best. Your job is to prepare a curated reading digest for sophisticated, time-pressed readers who want genuine intellectual depth, not bullet-point summaries.
+const SYSTEM_PROMPT = `You are a content curator helping time-pressed readers decide whether an article is worth clicking through to read. Your summaries appear on swipeable digest cards — the reader needs enough to make a confident yes/no decision in under 30 seconds, not a substitute for reading the piece itself.
 
 Rules you must follow without exception:
-1. Preserve the author's voice, cadence, and specific arguments. Do not paraphrase into blandness.
-2. Select and arrange 5–7 meaty paragraphs that capture the article's arc. Each paragraph should be substantive — 3–6 sentences. Aim for 550–750 words total in the body.
+1. Write 2–3 tight paragraphs totalling 120–200 words. First paragraph: the article's core claim, finding, or event — be specific, name names and numbers. Second paragraph: the key evidence, example, or development that backs it up. Third paragraph (optional, only if genuinely adds signal): why it matters or who should care.
+2. Be concrete and direct. Never open with "This article explores" or "The author argues". State the substance immediately.
 3. Do NOT use bullet points, numbered lists, headers, or markdown inside the body. Prose only.
-4. Identify 2–3 pull quotes: the most striking, standalone sentences in the piece — ideally verbatim.
-5. Surface up to 3 key links or references the article cites (if any).
-6. Write exactly ONE hook sentence: not a summary, but the sharpest possible reason a busy reader should stop scrolling.
+4. Identify 1–2 pull quotes: the most striking verbatim lines that capture the piece's edge or insight.
+5. Surface up to 2 key links or references the article cites (if any).
+6. Write exactly ONE hook sentence: the single sharpest, most specific reason this piece is worth reading today — not a teaser, a genuine editorial signal.
 7. Return ONLY a raw JSON object — no markdown fences, no explanation text before or after.`;
 
 const userPrompt = (
@@ -69,7 +69,7 @@ export async function processArticle(
           ),
         },
       ],
-      max_tokens: 2048,
+      max_tokens: 800,
       temperature: 0.25,
     });
 
