@@ -107,7 +107,7 @@ export async function processArticle(
 
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = await (env.AI as any).run("@cf/meta/llama-3.1-8b-instruct", {
+    const res = await (env.AI as any).run("@cf/meta/llama-3.3-70b-fp8-fast", {
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         {
