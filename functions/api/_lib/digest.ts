@@ -20,15 +20,21 @@ export function prefsKey(userId: string): string {
 
 // Only reads from KV — never blocks on a build. Returns null if not ready yet.
 export async function getCachedDigest(userId: string, env: Env): Promise<DailyDigest | null> {
-  return env.DIGEST_KV.get<DailyDigest>(digestKey(userId), 'json');
+  const raw = await env.DIGEST_KV.get(digestKey(userId));
+  if (!raw || raw === '"building"') return null;
+  try { return JSON.parse(raw) as DailyDigest; } catch { return null; }
 }
 
 // Starts a build if one hasn't been cached yet. Meant to be called with ctx.waitUntil().
 export async function triggerBuildIfNeeded(userId: string, env: Env): Promise<void> {
-  const cached = await env.DIGEST_KV.get(digestKey(userId));
-  if (cached) return; // already built today
+  const existing = await env.DIGEST_KV.get(digestKey(userId));
+  if (existing) return; // already built or currently building
   const prefs = await env.DIGEST_KV.get<UserPreferences>(prefsKey(userId), 'json');
   if (!prefs || prefs.interests.length === 0) return;
+
+  // Claim the build slot before doing any work — any concurrent call that checks
+  // KV after this point will see the sentinel and exit, preventing duplicate builds.
+  await env.DIGEST_KV.put(digestKey(userId), '"building"', { expirationTtl: 300 });
   await buildAndCache(userId, prefs, env);
 }
 
