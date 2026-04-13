@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "concurrently -n \"vite,pages\" -c \"cyan,yellow\" \"vite\" \"wrangler pages dev --proxy 5173 --compatibility-date=2024-09-23\"",
     "build": "vite build",
-    "deploy": "vite build && wrangler pages deploy dist --branch=production",
+    "deploy": "wrangler d1 execute morning-digest-db --remote --command=\"DROP TABLE IF EXISTS saved_articles; DROP TABLE IF EXISTS swipes;\" && wrangler d1 execute morning-digest-db --remote --file=schema.sql && vite build && wrangler pages deploy dist --branch=production",
     "db:init": "wrangler d1 execute morning-digest-db --local --file=schema.sql"
   },
   "dependencies": {
