@@ -176,7 +176,7 @@ export default function App() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <nav className="nav">
-        <button className="nav-logo" onClick={() => { setDigest(null); navigate('/setup'); }}>
+        <button className="nav-logo" onClick={() => navigate(digest ? '/today' : '/setup')}>
           Morning<span>Digest</span>
         </button>
         <div className="nav-right">
