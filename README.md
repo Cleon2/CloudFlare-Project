@@ -63,13 +63,15 @@ Protected by Cloudflare Access — log in with a `@cloudflare.com` Google accoun
 ## Deploy
 
 ```bash
-# 1. Apply the schema to the remote D1 database
+# 1. Apply the schema to the remote D1 database (first time only)
 wrangler d1 execute morning-digest-db --remote --file=schema.sql
 
 # 2. Build and deploy to Cloudflare Pages
 npm run deploy
 # → https://morning-digest.pages.dev
 ```
+
+Every deploy automatically invalidates all cached digests (see Cache Strategy below) so users always get fresh summaries built with the latest code. The D1 database and KV preferences are never wiped — only the digest cache is cleared.
 
 ---
 
@@ -114,7 +116,7 @@ functions/
       auth.ts               — CF Access JWT decoder + anonymous cookie fallback
       ai.ts                 — Workers AI integration (Llama 3.1 curator prompt)
       digest.ts             — Digest builder, KV caching, seen-article deduplication
-      rss.ts                — RSS feed fetching, XML parsing, HTML entity decoding
+      rss.ts                — RSS/Atom feed fetching, XML parsing, article enrichment
       types.ts              — Worker-side TypeScript interfaces
 schema.sql                  — D1 table definitions (swipes, saved_articles)
 wrangler.jsonc              — Cloudflare Pages configuration
@@ -138,6 +140,28 @@ Digest builds are non-blocking — the API returns immediately while Workers AI 
 
 ---
 
+## How the AI pipeline works
+
+Getting reliable, self-contained summaries required solving two problems: content quality going in, and output consistency coming out.
+
+**Content acquisition (rss.ts)**
+
+RSS feeds are inconsistent sources. Some publishers (Quanta, Aeon) embed the full article body. Others (Hacker News, TechCrunch) send only a 2–3 sentence excerpt — far too thin for a meaningful summary. To address this, the pipeline checks word count after RSS parsing. Articles under 350 words trigger a full fetch of the article URL. The HTML is then processed by extracting the `<article>` or `<main>` element before stripping tags — targeting semantic containers first avoids mixing in navigation, footers, and ads. The fetched content is only used if it is at least 1.5× richer than the RSS excerpt; otherwise the original is kept. Paywalled or bot-blocked pages fail silently and fall back to the RSS content.
+
+**Prompt design (ai.ts)**
+
+The system prompt frames the model as an editorial curator, not a summariser. It enforces a specific structure — a hook sentence answering "why read this now", 2–3 narrative paragraphs of 120–200 words, pull quotes, and key links — and asks for output as a raw JSON object. Requesting structured JSON rather than free prose makes the response reliably parseable and maps directly onto the card UI without any post-processing heuristics. Input is capped at 3500 words before being sent to the model to stay within the context window. Temperature is set to 0.3 to keep summaries factual and grounded.
+
+**Error handling**
+
+If the model returns malformed JSON or the inference call fails, the article is flagged with `summaryFailed: true` rather than falling back to a raw text truncation. The frontend renders a clean "Summary unavailable" card with a direct link to the original article, so users can still act on the piece rather than seeing broken or misleading content.
+
+**Cache strategy**
+
+Each digest is stored in KV under a key that includes a deploy-time timestamp: `digest:v{timestamp}:{userId}:{date}`. The timestamp is evaluated once per Worker cold start, so every new deployment naturally produces a new key — stale digests become unreachable immediately without any deletion. User preferences and saved articles in D1 are never affected.
+
+---
+
 ## Why this problem?
 
 The morning routine of opening twelve tabs and skimming headlines is fragmented and shallow. RSS readers surface links, not reading. AI summarisers collapse articles into bullet points that strip out the actual thinking. Morning Digest sits in between: enough of each article to decide if it's worth your time, organised by what you care about, delivered in one place.
@@ -146,40 +170,43 @@ The morning routine of opening twelve tabs and skimming headlines is fragmented 
 
 - RSS feeds are publicly accessible and don't require authentication.
 - One digest per user per day is the right cadence. Users who exhaust their feed can trigger a manual refresh.
-- Llama 3.1 8B is sufficient for editorial summarisation at this scope; a 70B model would produce noticeably better prose.
+- Llama 3.1 8B is sufficient for editorial summarisation at this scope; a 70B model would produce noticeably better prose but introduces higher latency and rate-limit pressure.
 - CF Access with Google IdP is sufficient identity — no additional user database is needed.
+- Full article fetching will fail silently for paywalled content; this is an acceptable degradation given the open-source nature of most feeds in the interest list.
 
 ## Trade-offs considered
 
-- **Non-blocking digest generation.** Processing 9–12 articles through an LLM takes 30–90 seconds. Rather than blocking the HTTP response, the API returns a 202 immediately and the client polls. This keeps the Worker request within Cloudflare's CPU limits and gives the user instant feedback.
+- **Non-blocking digest generation via `ctx.waitUntil()`.** Processing 9–12 articles through Workers AI takes 30–90 seconds. Blocking the HTTP response would exceed Cloudflare's CPU limits and leave the user staring at a blank screen. Instead the API returns a 202 immediately and the client polls every 3 seconds — a Workers-native pattern that keeps request lifetimes short while allowing background work to complete.
+
+- **Hybrid RSS + full-article fetch.** Relying solely on RSS content produces poor summaries for sources that only publish excerpts. Fetching every article URL unconditionally adds latency and fails for paywalled content. The middle path — only fetching when RSS content is under 350 words, and only using the result when it is meaningfully richer — gets quality improvements where they matter most without penalising already-rich feeds or adding unnecessary latency.
+
+- **Semantic HTML extraction over full-page strip.** Rather than stripping all HTML from a fetched page (which mixes article text with nav, ads, and footer copy), the pipeline targets `<article>` and `<main>` elements first. Most modern article pages use these semantic containers, so the signal-to-noise ratio of content passed to the model is significantly higher with minimal extra code.
+
 - **Concurrent AI processing in batches of 3.** Fully sequential processing is safe but slow (~3× slower for a 12-article digest). Fully parallel risks hitting Workers AI rate limits. Batches of 3 balance speed against reliability.
-- **7-day seen-article window.** Filtering out all previously seen articles would permanently deplete feeds as users switch topics. A 7-day rolling window prevents same-day repeats while allowing feeds to refill over time.
-- **Pages Functions instead of a standalone Worker.** Pages Functions are Workers under the hood and satisfy the requirement, while also giving us a clean way to serve the React frontend alongside the API from a single deployment.
-- **No full-article fetching.** The Worker processes RSS feed content rather than scraping full web pages. This avoids significant latency and fragility from arbitrary HTML parsing, at the cost of relying on feed publishers to include sufficient content.
+
+- **7-day seen-article window.** Filtering out all previously seen articles would permanently deplete feeds as users read more. A 7-day rolling window prevents same-day repeats while allowing feeds to refill over time.
+
+- **Pages Functions instead of a standalone Worker.** Pages Functions are Workers under the hood and satisfy the requirement, while also giving a clean way to serve the React frontend alongside the API from a single deployment and `wrangler.jsonc`.
+
+- **Deploy-time cache invalidation without deletion.** Rather than running a script to purge KV keys on every deploy, the digest key embeds a timestamp evaluated at Worker cold start. New deployments produce new keys; old digests become unreachable and expire naturally via their TTL. This keeps the deploy script simple and never risks deleting user preferences or saved articles.
 
 ## The One Thing I'd Improve If I Had More Time
 
-**Dynamic User-Defined Feeds**
-Currently, RSS links are hardcoded into the project. The single most impactful improvement would be building a management UI and backend logic to allow users to curate their own feed sources. 
+**Reliable full-article content for all sources**
 
-Rather than starting with an empty input box, the UI would feature a precompiled directory of the most influential RSS feeds across various categories. Users could individually check off the sites they are keen on, aided by custom descriptions highlighting what makes each specific feed unique or valuable. 
+The current content enrichment pipeline is a meaningful step forward — it fetches the full article for thin RSS feeds and extracts the main body using semantic HTML containers. But it still has a real limitation: it fails silently for paywalled content, bot-protected news sites, and JavaScript-rendered pages. For those sources, the AI still summarises a 2–3 sentence excerpt, which produces a noticeably thinner card than a fully-fetched article.
 
-This would move the project toward a true personalized, multi-tenant architecture, requiring **D1 Database** updates to map specific feeds to user profiles. Eventually, this could serve as the foundation for agentic feed discovery (detailed in the roadmap below).
+The right solution is to route article fetches through **Cloudflare Browser Rendering**, which executes JavaScript and handles cookie consent gates, combined with a paywall detection step that surfaces a clear "Paywalled" badge on the card rather than showing a thin summary without context. This would close the content quality gap for the remaining sources and give users accurate expectations before they tap through.
 
 ---
 
 ## Further Roadmap
 
-### 1. Durable Digest Rebuilds
-The digest rebuild is currently triggered in the background without a persistent job queue. If the Worker is evicted mid-build (e.g., due to CPU limits), the rebuild fails silently. I would implement **Cloudflare Queues** to make builds durable and retriable, ensuring the frontend receives a clear error state or retry logic rather than an infinite loading spinner.
+### 1. Dynamic User-Defined Feeds
+Currently RSS sources are hardcoded per interest category. The most impactful personalisation improvement would be a feed management UI where users can add, remove, and browse a curated directory of sources. This would require D1 schema changes to map feeds to user profiles and move the project toward a true multi-tenant architecture.
 
-### 2. Paywall Detection & Content Transparency
-To improve the user experience, I'd implement a pre-fetch check to detect paywalled links (by analyzing HTTP headers or common "gate" CSS selectors). The UI would then surface a **"Paywalled"** badge or warning, preventing user frustration when clicking through to restricted content.
+### 2. Durable Digest Rebuilds via Queues
+The digest rebuild is triggered in the background via `ctx.waitUntil()` without a persistent job queue. If the Worker is evicted mid-build, the rebuild fails silently and the user sees an infinite loading spinner. Routing builds through **Cloudflare Queues** would make them durable and retriable, with explicit failure states surfaced to the frontend.
 
 ### 3. Agentic Feed Discovery
-Building upon the user-defined feeds mentioned above, I'd want to make the system more agentic. By using an LLM-based agent (leveraging **Workers AI**), the app could proactively manage a user's library:
-* **Interest Analysis:** Analyze the user's reading and swipe habits to identify evolving interests.
-* **Dynamic Sourcing:** Use search tools to find and validate new, high-quality RSS feeds on the fly that match those interests.
-* **Auto-Pruning:** Automatically remove "dead" or low-relevance feeds to keep the digest insightful and high-signal.
-
-# CloudFlare-Project
+Building on user-defined feeds, an LLM agent (via Workers AI) could analyse swipe patterns to infer evolving interests, search for new high-quality RSS sources on the fly, and auto-prune low-signal feeds — making the digest progressively more personalised without manual curation.

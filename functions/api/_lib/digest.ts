@@ -2,9 +2,9 @@ import type { Env, DailyDigest, UserPreferences } from './types';
 import { fetchArticlesForInterests, enrichArticleContent } from './rss';
 import { processArticlesBatch } from './ai';
 
-// Bump this when deploying changes that affect summarization quality.
-// Old digests become unreachable immediately (they expire via their TTL naturally).
-const CACHE_VERSION = 'v2';
+// Evaluated once per Worker cold start — every new deploy gets a fresh timestamp,
+// so all cached digests are naturally invalidated without touching user data.
+const CACHE_VERSION = `v${Date.now()}`;
 
 function todayISO(): string {
   return new Date().toISOString().split('T')[0];
