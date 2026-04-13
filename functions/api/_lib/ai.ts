@@ -56,9 +56,41 @@ Return JSON with this exact shape:
 
 function extractJson(raw: string): string {
   const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fenced) return fenced[1].trim();
+  if (fenced) return sanitizeJson(fenced[1].trim());
   const braced = raw.match(/\{[\s\S]*\}/);
-  return braced ? braced[0] : raw;
+  return braced ? sanitizeJson(braced[0]) : raw;
+}
+
+// The model frequently emits literal newlines inside JSON string values, which
+// is invalid JSON. Walk character-by-character, track string context, and
+// replace any bare control characters with their escaped equivalents.
+function sanitizeJson(raw: string): string {
+  let result = '';
+  let inString = false;
+  let i = 0;
+  while (i < raw.length) {
+    const ch = raw[i];
+    if (ch === '\\' && inString) {
+      // Pass through escape sequences untouched
+      result += ch + (raw[i + 1] ?? '');
+      i += 2;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      result += ch;
+    } else if (inString && ch === '\n') {
+      result += '\\n';
+    } else if (inString && ch === '\r') {
+      result += '\\r';
+    } else if (inString && ch === '\t') {
+      result += '\\t';
+    } else {
+      result += ch;
+    }
+    i++;
+  }
+  return result;
 }
 
 export async function processArticle(
