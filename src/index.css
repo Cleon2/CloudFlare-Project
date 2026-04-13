@@ -197,6 +197,27 @@ html, body, #root {
 .key-links a::before { content: '→'; color: var(--accent); flex-shrink: 0; }
 .key-links a:last-child { margin-bottom: 0; }
 
+.summary-failed {
+  margin: 2em 0;
+  padding: 1.4em 1.6em;
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-align: center;
+}
+.summary-failed p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin-bottom: 0.9em;
+}
+.summary-failed a {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+}
+.summary-failed a:hover { opacity: 0.75; }
+
 .read-full {
   display: inline-flex; align-items: center; gap: 6px;
   margin-top: 2.2em;

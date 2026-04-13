@@ -13,6 +13,7 @@ export interface ProcessedArticle {
   pullQuotes: string[];
   keyLinks: Array<{ text: string; url: string }>;
   readingMinutes: number;
+  summaryFailed?: boolean;
 }
 
 export interface UserProfile {

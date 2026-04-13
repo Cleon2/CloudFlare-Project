@@ -120,7 +120,12 @@ function ArticleContent({ article, index, total }: { article: ProcessedArticle; 
       <div className="article-meta">
         <span className="article-source">{article.source}</span>
         <span className="meta-dot">·</span>
-        <span className="article-readtime">{article.readingMinutes} min read</span>
+        {!article.summaryFailed && (
+          <>
+            <span className="article-readtime">{article.readingMinutes} min read</span>
+            <span className="meta-dot">·</span>
+          </>
+        )}
         <span className="article-counter">{index + 1} / {total}</span>
       </div>
 
@@ -134,37 +139,48 @@ function ArticleContent({ article, index, total }: { article: ProcessedArticle; 
         {dateStr}
       </p>
 
-      <div className="article-body">
-        {paragraphs.map((para, i) => (
-          <span key={i}>
-            <p>{para}</p>
-            {i === 1 && quotes[0] && (
-              <blockquote className="pull-quote"><p>{quotes[0]}</p></blockquote>
-            )}
-            {i === 3 && quotes[1] && (
-              <blockquote className="pull-quote"><p>{quotes[1]}</p></blockquote>
-            )}
-            {i === 5 && quotes[2] && (
-              <blockquote className="pull-quote"><p>{quotes[2]}</p></blockquote>
-            )}
-          </span>
-        ))}
-      </div>
-
-      {article.keyLinks?.length > 0 && (
-        <div className="key-links">
-          <p className="key-links-label">Referenced in this piece</p>
-          {article.keyLinks.map((link, i) => (
-            <a key={i} href={link.url} target="_blank" rel="noopener noreferrer">
-              {link.text || link.url}
-            </a>
-          ))}
+      {article.summaryFailed ? (
+        <div className="summary-failed">
+          <p>Summary unavailable for this article.</p>
+          <a href={article.url} target="_blank" rel="noopener noreferrer">
+            Read the full article on {article.source} ↗
+          </a>
         </div>
-      )}
+      ) : (
+        <>
+          <div className="article-body">
+            {paragraphs.map((para, i) => (
+              <span key={i}>
+                <p>{para}</p>
+                {i === 1 && quotes[0] && (
+                  <blockquote className="pull-quote"><p>{quotes[0]}</p></blockquote>
+                )}
+                {i === 3 && quotes[1] && (
+                  <blockquote className="pull-quote"><p>{quotes[1]}</p></blockquote>
+                )}
+                {i === 5 && quotes[2] && (
+                  <blockquote className="pull-quote"><p>{quotes[2]}</p></blockquote>
+                )}
+              </span>
+            ))}
+          </div>
 
-      <a className="read-full" href={article.url} target="_blank" rel="noopener noreferrer">
-        Read in full on {article.source} ↗
-      </a>
+          {article.keyLinks?.length > 0 && (
+            <div className="key-links">
+              <p className="key-links-label">Referenced in this piece</p>
+              {article.keyLinks.map((link, i) => (
+                <a key={i} href={link.url} target="_blank" rel="noopener noreferrer">
+                  {link.text || link.url}
+                </a>
+              ))}
+            </div>
+          )}
+
+          <a className="read-full" href={article.url} target="_blank" rel="noopener noreferrer">
+            Read in full on {article.source} ↗
+          </a>
+        </>
+      )}
     </>
   );
 }
