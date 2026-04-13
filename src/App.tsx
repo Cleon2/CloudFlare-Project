@@ -116,7 +116,7 @@ export default function App() {
     fetch('/api/swipe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'save', articleUrl: article.url, articleTitle: article.title, articleSource: article.source, articleHook: article.hook }),
+      body: JSON.stringify({ action: 'save', articleUrl: article.url, articleTitle: article.title, articleSource: article.source, articleHook: article.hook, articleJson: JSON.stringify(article) }),
     }).catch(() => {});
     showToast('Saved to your library');
     const next = currentIndex + 1;

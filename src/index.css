@@ -298,8 +298,9 @@ html, body, #root {
 }
 .saved-list { max-width: 680px; margin: 0 auto; padding: 0 24px; }
 .saved-item {
-  display: block; text-decoration: none;
-  padding: 20px 0; border-bottom: 1px solid var(--border);
+  display: block; width: 100%; text-align: left;
+  background: none; border: none; border-bottom: 1px solid var(--border);
+  padding: 20px 0; cursor: pointer;
   transition: opacity .12s;
 }
 .saved-item:hover { opacity: .7; }
@@ -316,10 +317,22 @@ html, body, #root {
   font-family: var(--serif); font-style: italic;
   font-size: .9rem; color: var(--text-3); line-height: 1.55;
 }
+.saved-item-cta {
+  display: inline-block; margin-top: 8px;
+  font-size: .8rem; font-weight: 600; color: var(--accent);
+}
 .saved-empty {
   font-family: var(--serif); font-style: italic;
   color: var(--text-3); padding: 40px 0; text-align: center;
 }
+.saved-back-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: none; cursor: pointer;
+  font-size: .875rem; font-weight: 600; color: var(--accent);
+  padding: 0; margin-bottom: 28px;
+  transition: opacity .12s;
+}
+.saved-back-btn:hover { opacity: .7; }
 
 /* ── Toast ───────────────────────────────────────────────────────────── */
 .toast {

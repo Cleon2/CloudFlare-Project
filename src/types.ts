@@ -60,6 +60,7 @@ export interface SavedArticle {
   url: string;
   hook: string;
   topic?: string;
+  article_json?: string;
   saved_at: string;
 }
 

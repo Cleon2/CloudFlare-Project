@@ -94,6 +94,7 @@ export const onRequest: PagesFunction<Env> = async (ctx) => {
       articleTitle?: string;
       articleSource?: string;
       articleHook?: string;
+      articleJson?: string;
     };
     if (body.action !== "save" && body.action !== "skip") {
       return jsonResponse({ error: "action must be save or skip" }, 400);
@@ -105,7 +106,7 @@ export const onRequest: PagesFunction<Env> = async (ctx) => {
     if (body.action === "save") {
       await env.morning_digest_db
         .prepare(
-          `INSERT OR IGNORE INTO saved_articles (user_id, title, source, url, hook) VALUES (?, ?, ?, ?, ?)`,
+          `INSERT OR IGNORE INTO saved_articles (user_id, title, source, url, hook, article_json) VALUES (?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           userId,
@@ -113,6 +114,7 @@ export const onRequest: PagesFunction<Env> = async (ctx) => {
           body.articleSource ?? "",
           body.articleUrl,
           body.articleHook ?? "",
+          body.articleJson ?? null,
         )
         .run();
     }
@@ -129,7 +131,7 @@ export const onRequest: PagesFunction<Env> = async (ctx) => {
   } else if (path === "/api/saved" && method === "GET") {
     const result = await env.morning_digest_db
       .prepare(
-        `SELECT id, title, source, url, hook, saved_at FROM saved_articles WHERE user_id = ? ORDER BY saved_at DESC LIMIT 50`,
+        `SELECT id, title, source, url, hook, article_json, saved_at FROM saved_articles WHERE user_id = ? ORDER BY saved_at DESC LIMIT 50`,
       )
       .bind(userId)
       .all();
