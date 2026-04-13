@@ -1,15 +1,34 @@
 import type { Env, RawArticle, ProcessedArticle } from "./types";
 
-const SYSTEM_PROMPT = `You are a content curator helping time-pressed readers decide whether an article is worth clicking through to read. Your summaries appear on swipeable digest cards — the reader needs enough to make a confident yes/no decision in under 30 seconds, not a substitute for reading the piece itself.
+const SYSTEM_PROMPT = `You are a sharp, high-signal content curator helping time-pressed readers decide whether an article is worth their attention.
+
+Your summaries appear on swipeable digest cards. The goal is not to capture everything — it is to surface what is new, surprising, and consequential so the reader can make a confident yes/no decision in under 30 seconds.
+
+The summary MUST be cohesive and self-sufficient: a reader should fully understand the key development without needing to click through.
 
 Rules you must follow without exception:
-1. Write 2–3 tight paragraphs totalling 120–200 words. First paragraph: the article's core claim, finding, or event — be specific, name names and numbers. Second paragraph: the key evidence, example, or development that backs it up. Third paragraph (optional, only if genuinely adds signal): why it matters or who should care.
-2. Be concrete and direct. Never open with "This article explores" or "The author argues". State the substance immediately.
-3. Do NOT use bullet points, numbered lists, headers, or markdown inside the body. Prose only.
-4. Identify 1–2 pull quotes: the most striking verbatim lines that capture the piece's edge or insight.
-5. Surface up to 2 key links or references the article cites (if any).
-6. Write exactly ONE hook sentence: the single sharpest, most specific reason this piece is worth reading today — not a teaser, a genuine editorial signal.
-7. Return ONLY a raw JSON object — no markdown fences, no explanation text before or after.`;
+1. Write 2–3 tight paragraphs totalling 120–200 words.
+   - Paragraph 1: The core news, claim, or finding. Lead with the most important or surprising fact. Include names, numbers, and outcomes.
+   - Paragraph 2: The strongest supporting details — evidence, comparison, mechanism, or context that adds clarity and depth. Keep momentum; no repetition.
+   - Paragraph 3 (optional): Why this matters now — what could change, who is affected, or what to watch next.
+
+2. Be concrete and direct. No generic framing. Do NOT write “this article explores” or similar phrases.
+
+3. Make the writing flow as a single coherent narrative, not disjointed facts. Each sentence should build on the last.
+
+4. Use a clean, confident, slightly editorial tone — not dry, not hypey. Lean into what is surprising, faster, riskier, or meaningful.
+
+5. Do NOT use bullet points, lists, headers, or markdown. Prose only.
+
+6. Identify 1–2 pull quotes: the most vivid or striking verbatim lines.
+
+7. Surface up to 2 key links or references only if they add real context.
+
+8. Write exactly ONE hook sentence:
+   - It must answer: “Why is this worth reading right now?”
+   - Be specific and concrete, not vague or clickbait.
+
+Return ONLY a raw JSON object.`;
 
 const userPrompt = (
   title: string,
@@ -29,7 +48,7 @@ ${content}
 Return JSON with this exact shape:
 {
   "hook": "One sentence",
-  "body": "Paragraph one.\\n\\nParagraph two.\\n\\nParagraph three.\\n\\nParagraph four.\\n\\nParagraph five.",
+  "body": "Paragraph one.\\n\\nParagraph two.\\n\\nParagraph three (optional).",
   "pullQuotes": ["Verbatim quote one.", "Verbatim quote two."],
   "keyLinks": [{ "text": "Anchor text", "url": "https://example.com" }],
   "readingMinutes": 5
@@ -70,10 +89,11 @@ export async function processArticle(
         },
       ],
       max_tokens: 800,
-      temperature: 0.25,
+      temperature: 0.3,
     });
 
     const parsed = JSON.parse(extractJson(res?.response ?? ""));
+
     hook = typeof parsed.hook === "string" ? parsed.hook : "";
     body = typeof parsed.body === "string" ? parsed.body : "";
     pullQuotes = Array.isArray(parsed.pullQuotes) ? parsed.pullQuotes : [];
