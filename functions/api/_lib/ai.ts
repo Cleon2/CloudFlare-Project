@@ -3,65 +3,22 @@ import type { Env, RawArticle, ProcessedArticle } from './types';
 const SYSTEM_PROMPT = [
   'You are a sharp content curator writing summaries for a swipeable article digest.',
   '',
-  'Rules you must follow:',
-  '1. hook: ONE sentence answering why this is worth reading right now. Be specific and concrete.',
-  '2. body: 2-3 tight paragraphs, 100-150 words total.',
-  '   - Paragraph 1: The core news or finding. Lead with the most important fact. Include names and numbers.',
-  '   - Paragraph 2: Key supporting details or context.',
-  '   - Paragraph 3 (optional): Why this matters now.',
-  '   Separate paragraphs with \\n\\n. Plain prose only - no bullet points or markdown.',
-  '3. readingMinutes: estimated reading time as an integer.',
+  'Write 2-3 tight paragraphs (100-150 words total) so a busy reader can decide if this article is worth their time.',
+  '- Paragraph 1: Lead with the most important or surprising fact. Include names and numbers.',
+  '- Paragraph 2: Key supporting details or context.',
+  '- Paragraph 3 (optional): Why this matters now.',
   '',
-  'Return ONLY a valid JSON object. Do not add any text outside the JSON.',
+  'Rules: plain prose only, no bullet points, no markdown, no headers.',
+  'Output the summary and nothing else.',
 ].join('\n');
 
 function userPrompt(title: string, source: string, author: string, content: string): string {
-  const jsonShape = '{\n  "hook": "One sentence.",\n  "body": "Paragraph one.\\n\\nParagraph two.",\n  "readingMinutes": 3\n}';
   return (
     'Title: ' + title + '\n' +
     'Source: ' + source + '\n' +
     'Author: ' + (author || 'Unknown') + '\n\n' +
-    content + '\n\n' +
-    'Return JSON with this exact shape:\n' +
-    jsonShape
+    content
   );
-}
-
-function extractJson(raw: string): string {
-  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fenced) return sanitizeJson(fenced[1].trim());
-  const braced = raw.match(/\{[\s\S]*\}/);
-  return braced ? sanitizeJson(braced[0]) : raw;
-}
-
-// The model sometimes emits literal newlines inside JSON string values.
-// Walk character-by-character, track string context, and escape them.
-function sanitizeJson(raw: string): string {
-  let result = '';
-  let inString = false;
-  let i = 0;
-  while (i < raw.length) {
-    const ch = raw[i];
-    if (ch === '\\' && inString) {
-      result += ch + (raw[i + 1] ?? '');
-      i += 2;
-      continue;
-    }
-    if (ch === '"') {
-      inString = !inString;
-      result += ch;
-    } else if (inString && ch === '\n') {
-      result += '\\n';
-    } else if (inString && ch === '\r') {
-      result += '\\r';
-    } else if (inString && ch === '\t') {
-      result += '\\t';
-    } else {
-      result += ch;
-    }
-    i++;
-  }
-  return result;
 }
 
 export async function processArticle(article: RawArticle, env: Env): Promise<ProcessedArticle> {
@@ -74,18 +31,16 @@ export async function processArticle(article: RawArticle, env: Env): Promise<Pro
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: userPrompt(article.title, article.source, article.author, contentForAI) },
       ],
-      max_tokens: 1500,
+      max_tokens: 400,
       temperature: 0.3,
     });
 
-    const raw = typeof res?.response === 'string' ? res.response : '';
-    let parsed: ReturnType<typeof JSON.parse>;
-    try {
-      parsed = JSON.parse(extractJson(raw));
-    } catch {
-      console.error('[ai] JSON parse failed for "' + article.title + '" (' + article.source + '). Raw response: ' + raw.slice(0, 800));
-      throw new Error('JSON parse failed');
-    }
+    const body = typeof res?.response === 'string' ? res.response.trim() : '';
+    if (!body) throw new Error('Empty response from model');
+
+    const firstSentenceMatch = body.match(/^.+?[.!?]/);
+    const hook = firstSentenceMatch ? firstSentenceMatch[0].trim() : body.split('\n')[0];
+    const readingMinutes = Math.max(1, Math.ceil(body.split(/\s+/).length / 200));
 
     return {
       id: crypto.randomUUID(),
@@ -95,11 +50,11 @@ export async function processArticle(article: RawArticle, env: Env): Promise<Pro
       author: article.author,
       pubDate: article.pubDate,
       topic: article.topic,
-      hook:           typeof parsed.hook === 'string' ? parsed.hook : '',
-      body:           typeof parsed.body === 'string' ? parsed.body : '',
-      pullQuotes:     [],
-      keyLinks:       [],
-      readingMinutes: typeof parsed.readingMinutes === 'number' ? parsed.readingMinutes : 5,
+      hook,
+      body,
+      pullQuotes: [],
+      keyLinks: [],
+      readingMinutes,
     };
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
@@ -122,8 +77,6 @@ export async function processArticle(article: RawArticle, env: Env): Promise<Pro
   }
 }
 
-// Process in concurrent batches of 3 - faster than sequential without
-// hammering the Workers AI rate limit.
 export async function processArticlesBatch(articles: RawArticle[], env: Env): Promise<ProcessedArticle[]> {
   const CONCURRENCY = 3;
   const results: ProcessedArticle[] = [];
