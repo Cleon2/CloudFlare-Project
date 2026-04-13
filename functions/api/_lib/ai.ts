@@ -87,7 +87,7 @@ export async function processArticle(article: RawArticle, env: Env): Promise<Pro
 }
 
 export async function processArticlesBatch(articles: RawArticle[], env: Env): Promise<ProcessedArticle[]> {
-  const CONCURRENCY = 3;
+  const CONCURRENCY = 6;
   const results: ProcessedArticle[] = [];
 
   for (let i = 0; i < articles.length; i += CONCURRENCY) {
