@@ -1,22 +1,31 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { View, DailyDigest, SavedArticle, UserProfile } from './types';
+import { useNavigate, useLocation } from 'react-router-dom';
+import type { DailyDigest, SavedArticle, UserProfile } from './types';
 import SetupView from './components/SetupView';
 import LoadingView from './components/LoadingView';
 import ReadingView from './components/ReadingView';
 import SavedView from './components/SavedView';
 import TopicsDrawer from './components/TopicsDrawer';
 
+type DigestState = 'loading' | 'reading' | 'done';
+
 export default function App() {
-  const [view, setView]                   = useState<View>('setup');
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [digestState, setDigestState]      = useState<DigestState>('loading');
   const [digest, setDigest]               = useState<DailyDigest | null>(null);
   const [currentIndex, setCurrentIndex]   = useState(0);
   const [savedArticles, setSavedArticles] = useState<SavedArticle[]>([]);
   const [interests, setInterests]         = useState<string[]>([]);
   const [user, setUser]                   = useState<UserProfile | null>(null);
   const [drawerOpen, setDrawerOpen]       = useState(false);
-  const [prevView, setPrevView]           = useState<View>('setup');
   const [toast, setToast]                 = useState('');
   const [toastVisible, setToastVisible]   = useState(false);
+
+  const page = location.pathname === '/saved' ? 'saved'
+             : location.pathname === '/setup'  ? 'setup'
+             : 'today';
 
   // ── Toast ─────────────────────────────────────────────────────────────
   const showToast = useCallback((msg: string) => {
@@ -35,7 +44,8 @@ export default function App() {
 
   // ── Digest loading / polling ──────────────────────────────────────────
   const loadDigest = useCallback(async () => {
-    setView('loading');
+    setDigestState('loading');
+    navigate('/today');
 
     const poll = async (): Promise<void> => {
       try {
@@ -45,7 +55,7 @@ export default function App() {
           if (data.articles?.length > 0) {
             setDigest(data);
             setCurrentIndex(0);
-            setView('reading');
+            setDigestState('reading');
             return;
           }
         }
@@ -55,20 +65,31 @@ export default function App() {
     };
 
     poll();
-  }, []);
+  }, [navigate]);
 
-  // ── On mount: resume if user already has preferences ──────────────────
+  // ── On mount: redirect based on preferences ───────────────────────────
   useEffect(() => {
     (async () => {
       try {
         const res = await fetch('/api/preferences');
-        if (!res.ok) return;
+        if (!res.ok) {
+          if (location.pathname !== '/setup') navigate('/setup');
+          return;
+        }
         const prefs: { interests: string[] } = await res.json();
         if (prefs.interests?.length > 0) {
           setInterests(prefs.interests);
-          loadDigest();
+          if (location.pathname === '/' || location.pathname === '/today') {
+            loadDigest();
+          } else if (location.pathname === '/saved') {
+            fetchSaved();
+          }
+        } else {
+          navigate('/setup');
         }
-      } catch { /* first visit */ }
+      } catch {
+        navigate('/setup');
+      }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -106,7 +127,7 @@ export default function App() {
       body: JSON.stringify({ action: 'skip', articleUrl: article.url, articleTitle: article.title, articleSource: article.source, articleHook: article.hook }),
     }).catch(() => {});
     const next = currentIndex + 1;
-    if (next >= (digest?.articles.length ?? 0)) setView('done');
+    if (next >= (digest?.articles.length ?? 0)) setDigestState('done');
     else setCurrentIndex(next);
   }, [digest, currentIndex]);
 
@@ -120,78 +141,87 @@ export default function App() {
     }).catch(() => {});
     showToast('Saved to your library');
     const next = currentIndex + 1;
-    if (next >= (digest?.articles.length ?? 0)) setView('done');
+    if (next >= (digest?.articles.length ?? 0)) setDigestState('done');
     else setCurrentIndex(next);
   }, [digest, currentIndex, showToast]);
 
-  // ── Load more (rebuild digest with same interests) ────────────────────
+  // ── Load more ─────────────────────────────────────────────────────────
   const handleLoadMore = useCallback(async () => {
     await fetch('/api/refresh', { method: 'POST' });
     loadDigest();
   }, [loadDigest]);
 
-  // ── Saved view ────────────────────────────────────────────────────────
-  const showSaved = useCallback(async () => {
-    setPrevView(view);
-    setView('saved');
+  // ── Saved ─────────────────────────────────────────────────────────────
+  const fetchSaved = useCallback(async () => {
     try {
       const res = await fetch('/api/saved');
       if (res.ok) setSavedArticles(await res.json());
     } catch { /* best effort */ }
-  }, [view]);
+  }, []);
 
-  const goBack = useCallback(() => setView(prevView), [prevView]);
+  const showSaved = useCallback(() => {
+    fetchSaved();
+    navigate('/saved');
+  }, [fetchSaved, navigate]);
 
-  // ── Nav rendering ─────────────────────────────────────────────────────
-  const renderNavRight = () => {
-    if (view === 'saved') {
-      return <button className="nav-btn" onClick={goBack}>← Back</button>;
+  const showToday = useCallback(() => {
+    if (digest) {
+      setDigestState('reading');
+      navigate('/today');
+    } else {
+      loadDigest();
     }
-    if (view === 'reading' || view === 'done' || view === 'loading') {
-      return (
-        <>
-          <button className="nav-btn" onClick={showSaved}>Saved</button>
-          <button className="nav-btn" onClick={() => setDrawerOpen(true)}>⚙ Topics</button>
-          {user && (
-            <span className="user-avatar" title={user.email ?? 'You'}>
-              {user.initials}
-            </span>
-          )}
-        </>
-      );
-    }
-    return user ? (
-      <span className="user-avatar" title={user.email ?? 'You'}>{user.initials}</span>
-    ) : null;
-  };
+  }, [digest, loadDigest, navigate]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <nav className="nav">
-        <button className="nav-logo" onClick={() => { setDigest(null); setView('setup'); }}>
+        <button className="nav-logo" onClick={() => { setDigest(null); navigate('/setup'); }}>
           Morning<span>Digest</span>
         </button>
-        <div className="nav-right">{renderNavRight()}</div>
+        <div className="nav-right">
+          {page !== 'setup' && (
+            <>
+              <button className="nav-btn" onClick={() => setDrawerOpen(true)}>&#9881; Topics</button>
+              {user && (
+                <span className="user-avatar" title={user.email ?? 'You'}>{user.initials}</span>
+              )}
+            </>
+          )}
+          {page === 'setup' && user && (
+            <span className="user-avatar" title={user.email ?? 'You'}>{user.initials}</span>
+          )}
+        </div>
       </nav>
 
-      {view === 'setup' && (
+      {page !== 'setup' && (
+        <div className="tab-bar">
+          <button className={`tab-btn${page === 'today' ? ' active' : ''}`} onClick={showToday}>
+            Today
+          </button>
+          <button className={`tab-btn${page === 'saved' ? ' active' : ''}`} onClick={showSaved}>
+            Saved
+          </button>
+        </div>
+      )}
+
+      {page === 'setup' && (
         <SetupView onSubmit={handleSetupSubmit} />
       )}
-      {view === 'loading' && (
+      {page === 'today' && digestState === 'loading' && (
         <LoadingView />
       )}
-      {view === 'reading' && digest && (
+      {page === 'today' && digestState === 'reading' && digest && (
         <ReadingView
           digest={digest}
           currentIndex={currentIndex}
           onSkip={handleSkip}
           onSave={handleSave}
-          onShowSaved={showSaved}
         />
       )}
-      {view === 'done' && (
+      {page === 'today' && digestState === 'done' && (
         <div className="done-view">
-          <div className="done-icon">☀︎</div>
+          <div className="done-icon">&#9788;&#65038;</div>
           <h2 className="done-headline">You're all caught up.</h2>
           {digest?.allCaughtUp ? (
             <p className="done-sub">
@@ -214,18 +244,14 @@ export default function App() {
             >
               Change topics
             </button>
-            <button className="btn-secondary" onClick={showSaved}>
-              View saved articles
-            </button>
           </div>
         </div>
       )}
-      {view === 'saved' && (
+      {page === 'saved' && (
         <SavedView articles={savedArticles} />
       )}
 
-      {/* Topics drawer — available whenever user has gone past setup */}
-      {view !== 'setup' && (
+      {page !== 'setup' && (
         <TopicsDrawer
           open={drawerOpen}
           currentInterests={interests}

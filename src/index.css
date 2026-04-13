@@ -52,6 +52,26 @@ html, body, #root {
 }
 .nav-btn:hover { background: var(--surface); color: var(--text); }
 
+/* ── Tab bar ─────────────────────────────────────────────────────────── */
+.tab-bar {
+  display: flex;
+  position: sticky; top: 56px; z-index: 40;
+  background: rgba(250,249,246,.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+.tab-btn {
+  flex: 1; padding: 13px 0;
+  background: none; border: none; border-bottom: 2px solid transparent;
+  font-family: var(--sans); font-size: .8rem; font-weight: 600;
+  letter-spacing: .04em; text-transform: uppercase;
+  color: var(--text-3); cursor: pointer;
+  transition: color .15s, border-color .15s;
+  margin-bottom: -1px;
+}
+.tab-btn:hover:not(.active) { color: var(--text-2); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
 /* ── Setup view ──────────────────────────────────────────────────────── */
 .setup-view {
   display: flex; flex-direction: column; align-items: center;

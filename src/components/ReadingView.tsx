@@ -7,7 +7,6 @@ interface Props {
   currentIndex: number;
   onSkip: () => void;
   onSave: () => void;
-  onShowSaved: () => void;
 }
 
 export default function ReadingView({ digest, currentIndex, onSkip, onSave }: Props) {
