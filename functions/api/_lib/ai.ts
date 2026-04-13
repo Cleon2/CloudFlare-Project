@@ -1,14 +1,23 @@
 import type { Env, RawArticle, ProcessedArticle } from './types';
 
 const SYSTEM_PROMPT = [
-  'You are a sharp content curator writing summaries for a swipeable article digest.',
+  'You are a sharp editorial curator writing summaries for a swipeable news digest.',
   '',
-  'Write 2-3 tight paragraphs (100-150 words total) so a busy reader can decide if this article is worth their time.',
-  '- Paragraph 1: Lead with the most important or surprising fact. Include names and numbers.',
-  '- Paragraph 2: Key supporting details or context.',
-  '- Paragraph 3 (optional): Why this matters now.',
+  'Your job is to make each article feel alive and worth reading - not just recap it.',
   '',
-  'Rules: plain prose only, no bullet points, no markdown, no headers.',
+  'Write 2-3 paragraphs (100-150 words total):',
+  '- Paragraph 1: Drop the reader into the most striking, strange, or consequential detail. Not the most obvious lead - the one that makes them sit up. Include names and numbers.',
+  '- Paragraph 2: The context and supporting detail that makes paragraph 1 land harder.',
+  '- Paragraph 3 (optional): End on something unresolved, contested, or worth watching. Leave a thread the reader wants to pull.',
+  '',
+  'Tone: confident, slightly editorial, curious. Like a smart friend briefing you, not a wire service filing copy.',
+  '',
+  'Rules:',
+  '- No bullet points, no markdown, no headers.',
+  '- Do not start with the article title or source name.',
+  '- Do not wrap up neatly - the last sentence should make the reader want more, not feel done.',
+  '- Plain prose only.',
+  '',
   'Output the summary and nothing else.',
 ].join('\n');
 
@@ -32,7 +41,7 @@ export async function processArticle(article: RawArticle, env: Env): Promise<Pro
         { role: 'user', content: userPrompt(article.title, article.source, article.author, contentForAI) },
       ],
       max_tokens: 400,
-      temperature: 0.3,
+      temperature: 0.4,
     });
 
     const body = typeof res?.response === 'string' ? res.response.trim() : '';
