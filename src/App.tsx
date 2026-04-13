@@ -180,13 +180,17 @@ export default function App() {
           Morning<span>Digest</span>
         </button>
         <div className="nav-right">
-          {page !== 'setup' && (
+          {page === 'saved' && (
+            <button className="nav-btn" onClick={showToday}>← Back</button>
+          )}
+          {(page === 'today') && (
             <>
+              <button className="nav-btn" onClick={showSaved}>Saved</button>
               <button className="nav-btn" onClick={() => setDrawerOpen(true)}>&#9881; Topics</button>
-              {user && (
-                <span className="user-avatar" title={user.email ?? 'You'}>{user.initials}</span>
-              )}
             </>
+          )}
+          {user && page !== 'setup' && (
+            <span className="user-avatar" title={user.email ?? 'You'}>{user.initials}</span>
           )}
           {page === 'setup' && user && (
             <span className="user-avatar" title={user.email ?? 'You'}>{user.initials}</span>
@@ -194,16 +198,6 @@ export default function App() {
         </div>
       </nav>
 
-      {page !== 'setup' && (
-        <div className="tab-bar">
-          <button className={`tab-btn${page === 'today' ? ' active' : ''}`} onClick={showToday}>
-            Today
-          </button>
-          <button className={`tab-btn${page === 'saved' ? ' active' : ''}`} onClick={showSaved}>
-            Saved
-          </button>
-        </div>
-      )}
 
       {page === 'setup' && (
         <SetupView onSubmit={handleSetupSubmit} />
