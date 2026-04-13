@@ -78,7 +78,7 @@ export async function processArticle(article: RawArticle, env: Env): Promise<Pro
       temperature: 0.3,
     });
 
-    const raw = res?.response ?? '';
+    const raw = typeof res?.response === 'string' ? res.response : '';
     let parsed: ReturnType<typeof JSON.parse>;
     try {
       parsed = JSON.parse(extractJson(raw));
