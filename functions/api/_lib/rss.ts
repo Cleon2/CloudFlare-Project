@@ -9,22 +9,22 @@ export const INTEREST_SOURCES: Record<string, Array<{ name: string; url: string 
     { name: 'Hacker News',   url: 'https://news.ycombinator.com/rss' },
     { name: 'The Verge',     url: 'https://www.theverge.com/rss/index.xml' },
     { name: 'Ars Technica',  url: 'https://feeds.arstechnica.com/arstechnica/index' },
-    { name: 'Wired',         url: 'https://www.wired.com/feed/rss' },
+    { name: 'The Register',  url: 'https://www.theregister.com/headlines.atom' },
   ],
   ai: [
-    { name: 'MIT Tech Review', url: 'https://www.technologyreview.com/feed/' },
+    { name: 'The Gradient',    url: 'https://thegradient.pub/rss/' },
     { name: 'VentureBeat AI',  url: 'https://venturebeat.com/category/ai/feed/' },
     { name: 'The Batch',       url: 'https://www.deeplearning.ai/the-batch/feed/' },
   ],
   finance: [
     { name: 'Reuters Business', url: 'https://feeds.reuters.com/reuters/businessNews' },
     { name: 'TechCrunch VC',    url: 'https://techcrunch.com/category/venture/feed/' },
-    { name: 'Economist Finance', url: 'https://www.economist.com/finance-and-economics/rss.xml' },
+    { name: 'NPR Planet Money',  url: 'https://feeds.npr.org/510289/podcast.xml' },
   ],
   science: [
     { name: 'Quanta Magazine',   url: 'https://api.quantamagazine.org/feed/' },
     { name: 'Ars Technica Sci',  url: 'https://feeds.arstechnica.com/arstechnica/science' },
-    { name: 'New Scientist',     url: 'https://www.newscientist.com/feed/home/' },
+    { name: 'ScienceDaily',      url: 'https://www.sciencedaily.com/rss/all.xml' },
   ],
   design: [
     { name: 'Smashing Magazine', url: 'https://www.smashingmagazine.com/feed/' },
@@ -39,7 +39,7 @@ export const INTEREST_SOURCES: Record<string, Array<{ name: string; url: string 
     { name: 'Inside Climate News',  url: 'https://insideclimatenews.org/feed/' },
   ],
   culture: [
-    { name: 'The Atlantic',  url: 'https://www.theatlantic.com/feed/all/' },
+    { name: 'Aeon',          url: 'https://aeon.co/feed.rss' },
     { name: 'Arts & Letters', url: 'https://aldaily.com/feed/' },
   ],
   health: [
