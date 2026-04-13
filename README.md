@@ -157,21 +157,29 @@ The morning routine of opening twelve tabs and skimming headlines is fragmented 
 - **Pages Functions instead of a standalone Worker.** Pages Functions are Workers under the hood and satisfy the requirement, while also giving us a clean way to serve the React frontend alongside the API from a single deployment.
 - **No full-article fetching.** The Worker processes RSS feed content rather than scraping full web pages. This avoids significant latency and fragility from arbitrary HTML parsing, at the cost of relying on feed publishers to include sufficient content.
 
-## Future Improvements & Roadmap
+## The One Thing I'd Improve If I Had More Time
+
+**Dynamic User-Defined Feeds**
+Currently, RSS links are hardcoded into the project. The single most impactful improvement would be building a management UI and backend logic to allow users to curate their own feed sources. 
+
+Rather than starting with an empty input box, the UI would feature a precompiled directory of the most influential RSS feeds across various categories. Users could individually check off the sites they are keen on, aided by custom descriptions highlighting what makes each specific feed unique or valuable. 
+
+This would move the project toward a true personalized, multi-tenant architecture, requiring **D1 Database** updates to map specific feeds to user profiles. Eventually, this could serve as the foundation for agentic feed discovery (detailed in the roadmap below).
+
+---
+
+## Further Roadmap
 
 ### 1. Durable Digest Rebuilds
 The digest rebuild is currently triggered in the background without a persistent job queue. If the Worker is evicted mid-build (e.g., due to CPU limits), the rebuild fails silently. I would implement **Cloudflare Queues** to make builds durable and retriable, ensuring the frontend receives a clear error state or retry logic rather than an infinite loading spinner.
 
-### 2. Dynamic User-Defined Feeds
-Currently, RSS links are hardcoded. I plan to build a management UI and backend logic to allow users to manually input and manage their own list of RSS URLs. This would move the project toward a personalized multi-tenant architecture, requiring **D1 Database** updates to map specific feeds to user profiles.
-
-### 3. Paywall Detection & Content Transparency
+### 2. Paywall Detection & Content Transparency
 To improve the user experience, I'd implement a pre-fetch check to detect paywalled links (by analyzing HTTP headers or common "gate" CSS selectors). The UI would then surface a **"Paywalled"** badge or warning, preventing user frustration when clicking through to restricted content.
 
-### 4. Agentic Feed Discovery
-Instead of relying on a static list, I want to make the system more agentic. By using an LLM-based agent (leveraging **Workers AI** or **Gemini**), the app could:
-* **Interest Analysis:** Analyze the user's reading habits to identify evolving interests.
-* **Dynamic Sourcing:** Use search tools to find and validate new, high-quality RSS feeds on the fly.
+### 3. Agentic Feed Discovery
+Building upon the user-defined feeds mentioned above, I'd want to make the system more agentic. By using an LLM-based agent (leveraging **Workers AI**), the app could proactively manage a user's library:
+* **Interest Analysis:** Analyze the user's reading and swipe habits to identify evolving interests.
+* **Dynamic Sourcing:** Use search tools to find and validate new, high-quality RSS feeds on the fly that match those interests.
 * **Auto-Pruning:** Automatically remove "dead" or low-relevance feeds to keep the digest insightful and high-signal.
 
 # CloudFlare-Project
