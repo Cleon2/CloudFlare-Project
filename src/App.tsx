@@ -52,10 +52,10 @@ export default function App() {
   }, []);
 
   // ── Digest loading / polling ──────────────────────────────────────────
-  const loadDigest = useCallback(async () => {
+  const loadDigest = useCallback(async (reset = false) => {
     setDigestState('loading');
     setLastSkipped(null);
-    localStorage.removeItem('digestIndex');
+    if (reset) localStorage.removeItem('digestIndex');
     navigate('/today');
 
     const poll = async (): Promise<void> => {
@@ -114,7 +114,7 @@ export default function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ interests: selected }),
     });
-    loadDigest();
+    loadDigest(true);
   }, [loadDigest]);
 
   // ── Topics drawer: apply changes ──────────────────────────────────────
@@ -126,7 +126,7 @@ export default function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ interests: newInterests }),
     });
-    loadDigest();
+    loadDigest(true);
   }, [loadDigest]);
 
   // ── Article navigation ────────────────────────────────────────────────
@@ -188,7 +188,7 @@ export default function App() {
   // ── Load more ─────────────────────────────────────────────────────────
   const handleLoadMore = useCallback(async () => {
     await fetch('/api/refresh', { method: 'POST' });
-    loadDigest();
+    loadDigest(true);
   }, [loadDigest]);
 
   // ── Saved ─────────────────────────────────────────────────────────────
