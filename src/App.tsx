@@ -157,6 +157,16 @@ export default function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'save', articleUrl: article.url, articleTitle: article.title, articleSource: article.source, articleHook: article.hook, articleJson: JSON.stringify(article) }),
     }).catch(() => {});
+    setSavedArticles(prev => [...prev, {
+      id: Date.now(),
+      title: article.title,
+      source: article.source,
+      url: article.url,
+      hook: article.hook,
+      topic: article.topic,
+      article_json: JSON.stringify(article),
+      saved_at: new Date().toISOString(),
+    }]);
     showToast('Saved to your library');
     const next = currentIndex + 1;
     if (next >= (digest?.articles.length ?? 0)) setDigestState('done');
