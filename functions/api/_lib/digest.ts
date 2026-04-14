@@ -2,16 +2,12 @@ import type { Env, DailyDigest, UserPreferences } from './types';
 import { fetchArticlesForInterests, enrichArticleContent } from './rss';
 import { processArticlesBatch } from './ai';
 
-// Evaluated once per Worker cold start — every new deploy gets a fresh timestamp,
-// so all cached digests are naturally invalidated without touching user data.
-const CACHE_VERSION = `v${Date.now()}`;
-
 function todayISO(): string {
   return new Date().toISOString().split('T')[0];
 }
 
 export function digestKey(userId: string): string {
-  return `digest:${CACHE_VERSION}:${userId}:${todayISO()}`;
+  return `digest:${userId}:${todayISO()}`;
 }
 
 export function prefsKey(userId: string): string {

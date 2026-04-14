@@ -54,7 +54,7 @@ export const onRequest: PagesFunction<Env> = async (ctx) => {
       : "ME";
     return jsonResponse({ email: isEmail ? userId : null, initials });
 
-  // ── GET /api/preferences ─────────────────────────────────────────────────
+    // ── GET /api/preferences ─────────────────────────────────────────────────
   } else if (path === "/api/preferences" && method === "GET") {
     const prefs = await env.DIGEST_KV.get(`prefs:${userId}`, "json");
     response = jsonResponse(prefs ?? { interests: [] });
