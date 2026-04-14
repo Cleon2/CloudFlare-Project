@@ -55,6 +55,7 @@ export default function App() {
   const loadDigest = useCallback(async () => {
     setDigestState('loading');
     setLastSkipped(null);
+    localStorage.removeItem('digestIndex');
     navigate('/today');
 
     const poll = async (): Promise<void> => {
@@ -63,8 +64,9 @@ export default function App() {
         if (res.ok) {
           const data: DailyDigest = await res.json();
           if (data.articles?.length > 0) {
+            const saved = parseInt(localStorage.getItem('digestIndex') ?? '0');
             setDigest(data);
-            setCurrentIndex(0);
+            setCurrentIndex(saved < data.articles.length ? saved : 0);
             setDigestState('reading');
             return;
           }
@@ -138,8 +140,13 @@ export default function App() {
     }).catch(() => {});
     setLastSkipped(currentIndex);
     const next = currentIndex + 1;
-    if (next >= (digest?.articles.length ?? 0)) setDigestState('done');
-    else setCurrentIndex(next);
+    if (next >= (digest?.articles.length ?? 0)) {
+      localStorage.removeItem('digestIndex');
+      setDigestState('done');
+    } else {
+      localStorage.setItem('digestIndex', String(next));
+      setCurrentIndex(next);
+    }
   }, [digest, currentIndex]);
 
   const handleUndo = useCallback(() => {
@@ -169,8 +176,13 @@ export default function App() {
     }]);
     showToast('Saved to your library');
     const next = currentIndex + 1;
-    if (next >= (digest?.articles.length ?? 0)) setDigestState('done');
-    else setCurrentIndex(next);
+    if (next >= (digest?.articles.length ?? 0)) {
+      localStorage.removeItem('digestIndex');
+      setDigestState('done');
+    } else {
+      localStorage.setItem('digestIndex', String(next));
+      setCurrentIndex(next);
+    }
   }, [digest, currentIndex, showToast]);
 
   // ── Load more ─────────────────────────────────────────────────────────
