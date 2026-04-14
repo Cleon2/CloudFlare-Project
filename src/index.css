@@ -51,6 +51,13 @@ html, body, #root {
   transition: background .15s, color .15s;
 }
 .nav-btn:hover { background: var(--surface); color: var(--text); }
+.nav-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 16px; height: 16px; border-radius: 8px;
+  background: var(--accent); color: #fff;
+  font-size: .6rem; font-weight: 700;
+  margin-left: 5px; padding: 0 4px;
+}
 
 /* ── Tab bar ─────────────────────────────────────────────────────────── */
 .tab-bar {
@@ -345,6 +352,29 @@ html, body, #root {
   font-family: var(--serif); font-style: italic;
   color: var(--text-3); padding: 40px 0; text-align: center;
 }
+.saved-item-row {
+  display: flex; align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+.saved-item-row .saved-item {
+  flex: 1; border-bottom: none;
+}
+.saved-delete-btn {
+  flex-shrink: 0; padding: 8px 12px;
+  background: none; border: none; cursor: pointer;
+  font-size: .85rem; color: var(--text-3);
+  transition: color .12s;
+}
+.saved-delete-btn:hover { color: #e53e3e; }
+
+.undo-btn {
+  display: block; width: 100%; padding: 6px;
+  background: none; border: none; cursor: pointer;
+  font-size: .78rem; font-weight: 600; color: var(--accent);
+  text-align: center; transition: opacity .12s;
+}
+.undo-btn:hover { opacity: .7; }
+
 .saved-back-btn {
   display: inline-flex; align-items: center; gap: 6px;
   background: none; border: none; cursor: pointer;

@@ -7,9 +7,11 @@ interface Props {
   currentIndex: number;
   onSkip: () => void;
   onSave: () => void;
+  onUndo: () => void;
+  canUndo: boolean;
 }
 
-export default function ReadingView({ digest, currentIndex, onSkip, onSave }: Props) {
+export default function ReadingView({ digest, currentIndex, onSkip, onSave, onUndo, canUndo }: Props) {
   const article      = digest.articles[currentIndex];
   const total        = digest.articles.length;
   const progress     = (currentIndex / total) * 100;
@@ -40,10 +42,11 @@ export default function ReadingView({ digest, currentIndex, onSkip, onSave }: Pr
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft')                   animatedSkip();
       if (e.key === 'ArrowRight' || e.key === 's') animatedSave();
+      if (e.key === 'z' && canUndo)                onUndo();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [animatedSkip, animatedSave]);
+  }, [animatedSkip, animatedSave, onUndo, canUndo]);
 
   // Touch / swipe
   const touchStart = useRef({ x: 0, y: 0 });
@@ -75,6 +78,9 @@ export default function ReadingView({ digest, currentIndex, onSkip, onSave }: Pr
       </div>
 
       <div className="action-bar">
+        {canUndo && (
+          <button className="undo-btn" onClick={onUndo}>↩ Undo last skip</button>
+        )}
         <div className="action-bar-inner">
           <button className="btn-action btn-skip" onClick={animatedSkip}>Skip ←</button>
 

@@ -5,9 +5,10 @@ import ArticleContent from './ArticleContent';
 
 interface Props {
   articles: SavedArticle[];
+  onDelete: (id: number) => void;
 }
 
-export default function SavedView({ articles }: Props) {
+export default function SavedView({ articles, onDelete }: Props) {
   const [selected, setSelected] = useState<ProcessedArticle | null>(null);
 
   if (selected) {
@@ -51,28 +52,34 @@ export default function SavedView({ articles }: Props) {
             })();
 
             return (
-              <button
-                key={article.id}
-                className="saved-item"
-                onClick={() => parsed ? setSelected(parsed) : window.open(article.url, '_blank')}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                  {label && (
-                    <span
-                      className="topic-badge"
-                      style={{ '--topic-color': colour, marginBottom: 0 } as React.CSSProperties}
-                    >
-                      {label}
-                    </span>
-                  )}
-                  <span className="saved-item-source">{article.source}</span>
-                </div>
-                <p className="saved-item-title">{article.title}</p>
-                {article.hook && <p className="saved-item-hook">{article.hook}</p>}
-                <span className="saved-item-cta">
-                  {parsed ? 'Read summary →' : 'Open article ↗'}
-                </span>
-              </button>
+              <div key={article.id} className="saved-item-row">
+                <button
+                  className="saved-item"
+                  onClick={() => parsed ? setSelected(parsed) : window.open(article.url, '_blank')}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                    {label && (
+                      <span
+                        className="topic-badge"
+                        style={{ '--topic-color': colour, marginBottom: 0 } as React.CSSProperties}
+                      >
+                        {label}
+                      </span>
+                    )}
+                    <span className="saved-item-source">{article.source}</span>
+                  </div>
+                  <p className="saved-item-title">{article.title}</p>
+                  {article.hook && <p className="saved-item-hook">{article.hook}</p>}
+                  <span className="saved-item-cta">
+                    {parsed ? 'Read summary →' : 'Open article ↗'}
+                  </span>
+                </button>
+                <button
+                  className="saved-delete-btn"
+                  onClick={() => onDelete(article.id)}
+                  aria-label="Delete"
+                >✕</button>
+              </div>
             );
           })
         )}

@@ -16,6 +16,7 @@ export default function App() {
   const [digestState, setDigestState]      = useState<DigestState>('loading');
   const [digest, setDigest]               = useState<DailyDigest | null>(null);
   const [currentIndex, setCurrentIndex]   = useState(0);
+  const [lastSkipped, setLastSkipped]     = useState<number | null>(null);
   const [savedArticles, setSavedArticles] = useState<SavedArticle[]>([]);
   const [interests, setInterests]         = useState<string[]>([]);
   const [user, setUser]                   = useState<UserProfile | null>(null);
@@ -42,9 +43,18 @@ export default function App() {
       .catch(() => {});
   }, []);
 
+  // ── Fetch saved articles (for count badge + saved page) ──────────────
+  useEffect(() => {
+    fetch('/api/saved')
+      .then(r => r.ok ? r.json() : [])
+      .then(setSavedArticles)
+      .catch(() => {});
+  }, []);
+
   // ── Digest loading / polling ──────────────────────────────────────────
   const loadDigest = useCallback(async () => {
     setDigestState('loading');
+    setLastSkipped(null);
     navigate('/today');
 
     const poll = async (): Promise<void> => {
@@ -126,10 +136,18 @@ export default function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'skip', articleUrl: article.url, articleTitle: article.title, articleSource: article.source, articleHook: article.hook }),
     }).catch(() => {});
+    setLastSkipped(currentIndex);
     const next = currentIndex + 1;
     if (next >= (digest?.articles.length ?? 0)) setDigestState('done');
     else setCurrentIndex(next);
   }, [digest, currentIndex]);
+
+  const handleUndo = useCallback(() => {
+    if (lastSkipped === null) return;
+    setCurrentIndex(lastSkipped);
+    setLastSkipped(null);
+    setDigestState('reading');
+  }, [lastSkipped]);
 
   const handleSave = useCallback(() => {
     const article = digest?.articles[currentIndex];
@@ -164,6 +182,11 @@ export default function App() {
     navigate('/saved');
   }, [fetchSaved, navigate]);
 
+  const handleDeleteSaved = useCallback(async (id: number) => {
+    setSavedArticles(prev => prev.filter(a => a.id !== id));
+    await fetch(`/api/saved/${id}`, { method: 'DELETE' }).catch(() => {});
+  }, []);
+
   const showToday = useCallback(() => {
     if (digest) {
       setDigestState('reading');
@@ -185,7 +208,9 @@ export default function App() {
           )}
           {(page === 'today') && (
             <>
-              <button className="nav-btn" onClick={showSaved}>Saved</button>
+              <button className="nav-btn" onClick={showSaved}>
+                Saved{savedArticles.length > 0 && <span className="nav-badge">{savedArticles.length}</span>}
+              </button>
               <button className="nav-btn" onClick={() => setDrawerOpen(true)}>&#9881; Topics</button>
             </>
           )}
@@ -211,6 +236,8 @@ export default function App() {
           currentIndex={currentIndex}
           onSkip={handleSkip}
           onSave={handleSave}
+          onUndo={handleUndo}
+          canUndo={lastSkipped !== null}
         />
       )}
       {page === 'today' && digestState === 'done' && (
@@ -242,7 +269,7 @@ export default function App() {
         </div>
       )}
       {page === 'saved' && (
-        <SavedView articles={savedArticles} />
+        <SavedView articles={savedArticles} onDelete={handleDeleteSaved} />
       )}
 
       {page !== 'setup' && (

@@ -137,6 +137,15 @@ export const onRequest: PagesFunction<Env> = async (ctx) => {
       .all();
     response = jsonResponse(result.results);
 
+    // ── DELETE /api/saved/:id ────────────────────────────────────────────────
+  } else if (path.match(/^\/api\/saved\/\d+$/) && method === "DELETE") {
+    const id = parseInt(path.split("/").pop()!);
+    await env.morning_digest_db
+      .prepare("DELETE FROM saved_articles WHERE id = ? AND user_id = ?")
+      .bind(id, userId)
+      .run();
+    response = jsonResponse({ ok: true });
+
     // ── POST /api/refresh ────────────────────────────────────────────────────
   } else if (path === "/api/refresh" && method === "POST") {
     await invalidateDigest(userId, env);
