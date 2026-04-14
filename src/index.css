@@ -245,14 +245,26 @@ html, body, #root {
 }
 .summary-failed a:hover { opacity: 0.75; }
 
+.article-actions {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 2.2em;
+}
 .read-full {
   display: inline-flex; align-items: center; gap: 6px;
-  margin-top: 2.2em;
   font-size: .875rem; font-weight: 600;
   color: var(--accent); text-decoration: none;
   transition: opacity .12s;
 }
 .read-full:hover { opacity: .75; }
+.share-btn {
+  padding: 7px 16px;
+  border: 1.5px solid var(--border); border-radius: 20px;
+  background: transparent;
+  font-family: var(--sans); font-size: .8rem; font-weight: 500;
+  color: var(--text-2); cursor: pointer;
+  transition: border-color .15s, color .15s;
+}
+.share-btn:hover { border-color: var(--text-2); color: var(--text); }
 
 /* Article slide transition */
 .article-wrap {

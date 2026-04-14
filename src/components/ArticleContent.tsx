@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { ProcessedArticle } from '../types';
 import { TOPIC_COLOURS, TOPIC_LABELS } from '../types';
 
@@ -8,6 +9,17 @@ interface Props {
 }
 
 export default function ArticleContent({ article, index, total }: Props) {
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      await navigator.share({ title: article.title, text: article.hook, url: article.url }).catch(() => {});
+    } else {
+      await navigator.clipboard.writeText(article.url).catch(() => {});
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
   const paragraphs = (article.body ?? '').split('\n\n').filter(p => p.trim().length > 0);
   const quotes     = article.pullQuotes ?? [];
 
@@ -90,9 +102,14 @@ export default function ArticleContent({ article, index, total }: Props) {
             </div>
           )}
 
-          <a className="read-full" href={article.url} target="_blank" rel="noopener noreferrer">
-            Read in full on {article.source} ↗
-          </a>
+          <div className="article-actions">
+            <a className="read-full" href={article.url} target="_blank" rel="noopener noreferrer">
+              Read in full on {article.source} ↗
+            </a>
+            <button className="share-btn" onClick={handleShare}>
+              {copied ? 'Link copied!' : 'Share'}
+            </button>
+          </div>
         </>
       )}
     </>
